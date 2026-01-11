@@ -1,65 +1,97 @@
-import Image from "next/image";
+"use client"
+import { useEffect, useState } from "react"
+import { useDispatch, useSelector } from "react-redux"
+import {fetchProducts} from '@/redux/productSlice'
+import {RootState, AppDispatch} from '@/redux/store'
+import ProductCard from '@/components/ProductCard'
+import { Product } from "@/types/Product";
 
-export default function Home() {
+export default function Home(){
+  const dispatch=useDispatch<AppDispatch>();
+  const {items,status}=useSelector((state:RootState)=>state.product);
+
+  const [search, setSearch] = useState("");
+  const [category, setCategory] = useState("All");
+  const [sort, setSort] = useState("default");
+  const [page, setPage]=useState(1)
+  const itemsPerPage=8;
+
+  useEffect(()=>{
+    dispatch(fetchProducts());
+  },[dispatch]);
+
+  const filtered=items
+  .filter((item:Product)=>
+    item.title.toLowerCase().includes(search.toLowerCase())
+  )
+  .filter((items:Product)=>
+    category==="All"?true: items.category===category
+  )
+  .sort((a:Product,b:Product)=>{
+    if (sort==="low") return a.price - b.price;
+    if (sort==="high") return b.price - a.price;
+    return 0;
+  })
+  const start=(page-1)* itemsPerPage;
+  const paginated = filtered.slice(start,start + itemsPerPage);
+  const totalPages= Math.ceil(filtered.length/itemsPerPage);
+
+  if(status==='loading...') return <p className="p-10 font-black text-2xl text-blue-950">Loading...</p>
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
+    <main className="p-10">
+      <div className="flex flex-wrap gap-4 mb-8">
+        <input
+          placeholder="Search products..."
+          className="border px-4 py-2 rounded w-60"
+          value={search}
+          onChange={e => { setSearch(e.target.value); setPage(1); }}
         />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+
+        <select
+          className="border px-4 py-2 rounded"
+          value={category}
+          onChange={e => { setCategory(e.target.value); setPage(1); }}
+        >
+          <option value="all">All Categories</option>
+          <option value="electronics">Electronics</option>
+          <option value="jewelery">Jewelery</option>
+          <option value="men's clothing">Men</option>
+          <option value="women's clothing">Women</option>
+        </select>
+
+        <select
+          className="border px-4 py-2 rounded"
+          value={sort}
+          onChange={e => setSort(e.target.value)}
+        >
+          <option value="default">Sort</option>
+          <option value="low">Price: Low → High</option>
+          <option value="high">Price: High → Low</option>
+        </select>
+      </div>
+
+      {/* Product Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+        {paginated.map((product: Product) => (
+          <ProductCard key={product.id} products={product} />
+        ))}
+      </div>
+
+      {/* Pagination */}
+      <div className="flex justify-center gap-3 mt-10">
+        {Array.from({ length: totalPages }, (_, i) => (
+          <button
+            key={i}
+            className={`px-4 py-2 border rounded ${
+              page === i + 1 ? "bg-blue-600 text-white" : ""
+            }`}
+            onClick={() => setPage(i + 1)}
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
-  );
+            {i + 1}
+          </button>
+        ))}
+      </div>
+    </main>
+  )
 }
